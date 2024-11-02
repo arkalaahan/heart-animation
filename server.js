@@ -6,15 +6,21 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-app.use(express.static('public'));
+app.use(express.static('public')); // Serve static files from the public directory
 
 io.on('connection', (socket) => {
     console.log('A user connected');
+
     socket.on('sendMessage', (msg) => {
-        io.emit('receiveMessage', msg);
+        io.emit('receiveMessage', msg); // Emit the message to all connected clients
+    });
+
+    socket.on('disconnect', () => {
+        console.log('A user disconnected');
     });
 });
 
-server.listen(3000, () => {
-    console.log('Server is running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
