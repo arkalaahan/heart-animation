@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #282c34; /* Dark background for contrast */
+            color: white; /* Default text color */
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        #notification {
+            position: fixed; 
+            bottom: 100px; 
+            right: 20px; 
+            font-size: 1.5rem; 
+            opacity: 0; 
+            animation: floatUp 1.8s forwards; /* Adjusted animation duration */
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+    
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100%); /* Start from below the screen */
+                opacity: 0; /* Fully transparent */
+            }
+            10% {
+                opacity: 1; /* Fully visible */
+                transform: translateY(-10px); /* Small bounce effect */
+            }
+            90% {
+                transform: translateY(-65vh); /* Move up to 65% of viewport height */
+                opacity: 1; /* Still visible */
+            }
+            100% {
+                opacity: 0; /* Fade out completely */
+            }
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #messageInput {
+            padding: 10px;
+            font-size: 1rem;
+            width: calc(100% - 100px); /* Full width minus button width */
+            border: 2px solid #61dafb; /* Light blue border */
+            border-radius: 5px;
+            margin-right: 10px;
+            color: #000; /* Default color for text input */
+        }
+
+        #colorSelect {
+            margin-right: 10px;
+            padding: 10px;
+            border: 2px solid #61dafb; /* Light blue border */
+            border-radius: 5px;
+            background: transparent;
+            color: white; /* White text color */
+        }
+
+        #sendButton {
+            padding: 10px;
+            font-size: 1rem;
+            background-color: #61dafb; /* Light blue background */
+            border: none;
+            border-radius: 5px;
+            color: #fff; /* White text */
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #sendButton:hover {
+            background-color: #21a1f1; /* Darker blue on hover */
+        }
+
+        .messages {
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            width: 100%;
+        }
+
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 5px;
+            color: #000; /* Default text color */
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="messages" id="messagesContainer"></div>
+        <select id="colorSelect">
+            <option value="#000000">Black</option>
+            <option value="#ff0000">Red</option>
+            <option value="#ffffff">White</option>
+            <option value="#00ff00">Green</option> <!-- Additional color option -->
+        </select>
+        <input type="text" id="messageInput" placeholder="Type a message..." />
+        <button id="sendButton">Send</button>
+    </div>
+    <div id="notification"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const notification = document.getElementById('notification');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const colorSelect = document.getElementById('colorSelect');
+
+        let lastEnterPress = 0; // For tracking enter key presses
+
+        // Function to send message
+        const sendMessage = () => {
+            const message = messageInput.value;
+            if (message.trim()) { // Prevent sending empty messages
+                const color = colorSelect.value; // Get selected color
+                socket.emit('sendMessage', { text: message, color: color });
+                messageInput.value = '';
+            }
+        };
+
+        // Send message on button click
+        sendButton.addEventListener('click', sendMessage);
+
+        // Send message on double Enter press
+        messageInput.addEventListener('keydown', (e) => {
+            const currentTime = Date.now();
+            if (e.key === 'Enter') {
+                if (currentTime - lastEnterPress < 1000) { // Check if Enter is pressed twice within 1 second
+                    sendMessage();
+                }
+                lastEnterPress = currentTime;
+                e.preventDefault(); // Prevent default behavior of Enter key
+            }
+        });
+
+        socket.on('receiveMessage', (msg) => {
+            // Append message to messages container
+            const messageElement = document.createElement('div');
+            messageElement.innerText = msg.text;
+            messageElement.className = 'message';
+            messageElement.style.color = msg.color; // Set the text color
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll to the latest message
+            
+            notification.innerText = msg.text; // Show notification
+            notification.style.color = msg.color; // Set notification text color
+            notification.style.opacity = 1;
+
+            // Reset animation
+            notification.style.animation = 'none'; // Remove animation
+            notification.offsetHeight; // Trigger reflow
+            notification.style.animation = ''; // Reapply animation
+        });
+    </script>
+</body>
+</html>
